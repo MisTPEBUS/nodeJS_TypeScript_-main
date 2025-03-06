@@ -5,7 +5,7 @@ import cors from 'cors';
 import Router from './routers/index';
 
 import { AppError, NotFound } from './utils/appResponse';
-import logger from './utils/logger';
+
 import bodyParser from 'body-parser';
 
 const app: Application = express();
@@ -29,24 +29,41 @@ app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
   // 如果不是 JSON 解析錯誤，則交由下一個中介軟體處理
   next();
 });
-app.post('/webhook', (req, res) => {
-  console.log('收到 webhook 資料:', req.body);
+// 設定 webhook endpoint
+app.post('/webhook', (req: Request, res: Response) => {
+  // Telegram 會將更新內容以 JSON 格式傳送過來
+  console.log('收到 webhook 更新:', JSON.stringify(req.body, null, 2));
 
-  // 從訊息中取得 groupID 與 clientID (使用者ID)
-  if (req.body && req.body.message) {
-    const chatId = req.body.message.chat.id; // 若是在群組中，這通常為 groupID (可能為負數)
-    const clientId = req.body.message.from.id; // 發送訊息的使用者ID
-
-    console.log('Group ID:', chatId);
-    console.log('Client ID:', clientId);
+  // 可在此處進行進一步處理，例如擷取 chat ID 並發送歡迎訊息
+  if (req.body.message) {
+    const chatId = req.body.message.chat.id;
+    // 根據需求進行處理，例如呼叫 sendMessage 發送訊息
+    sendWelcomeMessage(chatId);
   }
+
+  // 回傳 200 OK 表示已成功接收更新
   res.sendStatus(200);
 });
-// Root Route
-/* app.use('/v1/api', Router);
-app.get('/OPTION', (req: Request, res: Response) => {
-  res.status(200).json();
-}); */
+
+// 發送歡迎訊息的函式
+async function sendWelcomeMessage(chatId: number | string) {
+  const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+  if (!TELEGRAM_TOKEN) {
+    console.error('請在環境變數中設定 TELEGRAM_TOKEN');
+    return;
+  }
+  const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+  try {
+    const url = `${TELEGRAM_API}/sendMessage`;
+    const response = await axios.post(url, {
+      chat_id: chatId,
+      text: '歡迎加入！',
+    });
+    console.log('歡迎訊息發送結果:', response.data);
+  } catch (error: any) {
+    console.error('歡迎訊息發送失敗:', error.response ? error.response.data : error.message);
+  }
+}
 
 //Route 404
 app.use(NotFound);
@@ -55,7 +72,6 @@ app.use(NotFound);
 app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
   err.statusCode = err.statusCode || 500;
 
-  logger.error(`${err.statusCode} :${req.path}-${err.message}`);
   res.setHeader('Content-Type', 'application/json'); // 確保回傳 JSON
   if (process.env.NODE_ENV === 'dev') {
     return res.status(err.statusCode).json({
