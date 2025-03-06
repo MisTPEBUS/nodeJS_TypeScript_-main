@@ -7,6 +7,7 @@ import Router from './routers/index';
 import { AppError, NotFound } from './utils/appResponse';
 
 import bodyParser from 'body-parser';
+import axios from 'axios';
 
 const app: Application = express();
 // Express Middlewares
