@@ -58,7 +58,7 @@ app.post('/webhook', async (req: Request, res: Response) => {
     } else {
       // 非首次歡迎或其他訊息處理邏輯
       // 可根據需求進行其他處理
-      const sendResult = await sendWelcomeMessage(chatId, `你說${req.body.message}`);
+      const sendResult = await sendWelcomeMessage(chatId, `id:${chatId} \n你說${req.body.message.text}`);
     }
   }
   res.sendStatus(200);
