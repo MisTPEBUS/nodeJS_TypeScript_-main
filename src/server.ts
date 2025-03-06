@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    await prisma.$connect();
+    /*   await prisma.$connect(); */
     console.log('成功連線到資料庫');
 
     App.listen(port, () => {
