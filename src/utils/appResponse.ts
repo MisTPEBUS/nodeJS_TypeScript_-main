@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from './logger';
+
 import { ErrorCode, ErrorStatus } from './errorCode';
 
 export const delSuccess = (res: Response, status = 200): Response => {
@@ -34,7 +34,6 @@ export const Success = <T>(res: Response, data: T, status = 200): Response => {
  * @param {Response} res - Express 回應物件。
  */
 export const NotFound = (req: Request, res: Response) => {
-  logger.error(`404 :${req.path}`);
   res.status(404).json({
     status: 'error',
     message: '查無此路由，請確認 API 格式!',
