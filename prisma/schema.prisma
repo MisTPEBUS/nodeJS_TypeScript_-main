@@ -1,0 +1,22 @@
+// 產生 Prisma Client 的設定
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 資料庫連線設定，請依照實際情況修改 provider 及 DATABASE_URL
+datasource db {
+  provider = "postgresql" // 或 "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Auth {
+  id           String   @id @default(uuid()) @db.Uuid
+  GroupID         String    @unique @db.VarChar(50)
+  name String
+  
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+  @@map("credit_package")
+}
+
+
