@@ -27,46 +27,71 @@ app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// 簡單的記憶體儲存已加入用戶
+const joinedUsers = new Set<number | string>();
+
 // 設定 webhook endpoint
 app.post('/webhook', async (req: Request, res: Response) => {
   console.log('收到 webhook 更新:', JSON.stringify(req.body, null, 2));
 
   if (req.body.message) {
     const chatId = req.body.message.chat.id;
-    try {
-      const sendResult = await sendWelcomeMessage(chatId);
-      // 將 sendResult 回傳，告知訊息發送結果
-      return res.status(200).json({
-        status: 'success',
-        message: '更新接收成功，歡迎訊息已發送',
-        sendResult,
-      });
-    } catch (error: any) {
-      // 若發送失敗，仍回傳 200 讓 Telegram 知道更新已處理，但帶上錯誤資訊
-      return res.status(200).json({
-        status: 'fail',
-        message: '更新接收成功，但歡迎訊息發送失敗',
-        error: error.response ? error.response.data : error.message,
-      });
+    const text = req.body.message.text;
+
+    // 檢查是否為第一次加入 (這裡以 /start 為例)
+    if (text === '/start' && !joinedUsers.has(chatId)) {
+      joinedUsers.add(chatId);
+      try {
+        const sendResult = await sendWelcomeMessage(chatId, `歡迎加入notify_bot！`); // 傳入 true 表示首次歡迎訊息
+        return res.status(200).json({
+          status: 'success',
+          message: '首次歡迎訊息已發送',
+          sendResult,
+        });
+      } catch (error: any) {
+        return res.status(200).json({
+          status: 'fail',
+          message: '首次歡迎訊息發送失敗',
+          error: error.response ? error.response.data : error.message,
+        });
+      }
+    } else {
+      // 非首次歡迎或其他訊息處理邏輯
+      // 可根據需求進行其他處理
+      const sendResult = await sendWelcomeMessage(chatId, `你說${req.body.message}`);
     }
   }
-  // 如果更新內沒有 message，直接回應 200 OK
   res.sendStatus(200);
 });
 
-// 發送歡迎訊息的函式
-async function sendWelcomeMessage(chatId: number | string): Promise<any> {
+app.post('/sendMsg', async (req: Request, res: Response) => {
+  console.log('收到 webhook 更新:', JSON.stringify(req.body, null, 2));
+
+  if (req.body.message) {
+    const chatId = req.body.chat_id;
+    const text = req.body.message;
+
+    // 非首次歡迎或其他訊息處理邏輯
+    // 可根據需求進行其他處理
+    const sendResult = await sendWelcomeMessage(chatId, `${text}`);
+  }
+  res.sendStatus(200);
+});
+
+// 發送歡迎訊息的函式，isFirst 用來區分是否為首次加入
+async function sendWelcomeMessage(chatId: number | string, Msg?: string): Promise<any> {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
   if (!TELEGRAM_TOKEN) {
     console.error('請在環境變數中設定 TELEGRAM_TOKEN');
     throw new Error('TELEGRAM_TOKEN not set');
   }
   const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+
   try {
     const url = `${TELEGRAM_API}/sendMessage`;
     const response = await axios.post(url, {
       chat_id: chatId,
-      text: '歡迎加入！',
+      text: Msg,
     });
     console.log('歡迎訊息發送結果:', response.data);
     return response.data;
